@@ -5,44 +5,51 @@ import Security
 let ALTOOL = "/Applications/Xcode.app/Contents/Applications/Application Loader.app/Contents/Frameworks/ITunesSoftwareService.framework/Support/altool"
 func main(){
     let args = get_args()
-    let account = args["u"]
-    let ipa_path = args["f"]
-    if account == nil || ipa_path == nil{
-        usage()
-        return
-    }
-    exec(account!, ipa_path!, args["v"] != nil)
-}
-func exec(account:String, ipa_path:String, is_validate:Bool){
+    let account = val_or_usage(args["u"])
+    let ipa_path = val_or_usage(args["f"])
     if !NSFileManager.defaultManager().fileExistsAtPath(ALTOOL){
         println("altool not found")
         println("  " + ALTOOL)
-        return
+        exit(1)
     }
     if !NSFileManager.defaultManager().fileExistsAtPath(ipa_path){
         println("ipa not found")
         println("  " + ipa_path)
-        return
+        exit(1)
     }
-    if let pass:String = get_password(account){
-        let task = NSTask()
-        task.launchPath = ALTOOL
-        if is_validate{
-            println("Validating...")
-            task.arguments = ["-u", account, "-p", pass, "--validate-app", "-f", ipa_path]
-        }else{
-            println("Uploading...")
-            task.arguments = ["-u", account, "-p", pass, "--upload-app", "-f", ipa_path]
-        }
-        task.standardInput = NSFileHandle.fileHandleWithNullDevice()
-        task.standardError = NSFileHandle.fileHandleWithStandardError()
-        task.standardOutput = NSFileHandle.fileHandleWithStandardOutput()
-        task.launch()
-        task.waitUntilExit()
-    }else{
+    let password:String = val_or_exit(get_password(account)){
         println("Password not found")
-        return
     }
+    exec(account, ipa_path, password, args["v"] != nil)
+}
+func val_or_exit<T>(v:T?, f:() -> Void)->T{
+    if(v == nil){
+        f()
+        exit(1)
+    }else{
+        return v!
+    }
+}
+func val_or_usage<T>(v:T?) -> T{
+    return val_or_exit(v){
+        usage()
+    }
+}
+func exec(account:String, ipa_path:String, password:String, is_validate:Bool){
+    let task = NSTask()
+    task.launchPath = ALTOOL
+    if is_validate{
+        println("Validating...")
+        task.arguments = ["-u", account, "-p", password, "--validate-app", "-f", ipa_path]
+    }else{
+        println("Uploading...")
+        task.arguments = ["-u", account, "-p", password, "--upload-app", "-f", ipa_path]
+    }
+    task.standardInput = NSFileHandle.fileHandleWithNullDevice()
+    task.standardError = NSFileHandle.fileHandleWithStandardError()
+    task.standardOutput = NSFileHandle.fileHandleWithStandardOutput()
+    task.launch()
+    task.waitUntilExit()
 }
 func get_password(_account:String) -> String?{
     let host:NSString = "itunesconnect.apple.com"
