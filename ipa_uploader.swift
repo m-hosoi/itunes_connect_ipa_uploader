@@ -70,7 +70,7 @@ func get_password(_account:String) -> String?{
     }
     let pass = NSString(bytes: buf, length: Int(buf_size), encoding: NSUTF8StringEncoding)
     SecKeychainItemFreeContent(nil , buf)
-    return pass
+    return pass as? String
 }
 func get_args() -> Dictionary<String,String>{
     return get_args(Process.arguments)
